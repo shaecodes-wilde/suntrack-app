@@ -1,0 +1,185 @@
+{
+  "name": "Solar Lead Follow-up → Google Tasks (with Updates)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "solar-lead-followup",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook - Receive Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "solar-lead-followup"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-taskid",
+              "leftValue": "={{ $json.body.taskId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-node",
+      "name": "Has Existing Task?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "task": "={{ $json.body.taskId }}",
+        "updateFields": {
+          "title": "={{ $json.body.customerName }} : {{ new Date($json.body.followUpDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}",
+          "dueDate": "={{ $json.body.followUpDate }}:00.000Z",
+          "notes": "=📋 SOLAR LEAD FOLLOW-UP\n━━━━━━━━━━━━━━━━━━━━━\n\n👤 Customer: {{ $json.body.customerName }}\n📞 Phone: {{ $json.body.phone }}\n📧 Email: {{ $json.body.email }}\n🏠 Project Type: {{ $json.body.projectType }}\n📍 Address: {{ $json.body.siteInfo }}\n⚡ Electrical: {{ $json.body.electricalService }}\n📊 Status: {{ $json.body.consultationStatus }}\n\n📝 Notes:\n{{ $json.body.notes }}\n\n━━━━━━━━━━━━━━━━━━━━━\nLead ID: {{ $json.body.leadId }}"
+        }
+      },
+      "id": "update-task-node",
+      "name": "Google Tasks - Update",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [480, 180]
+    },
+    {
+      "parameters": {
+        "task": "={{ $('Webhook - Receive Lead').first().json.body.taskId }}",
+        "title": "={{ $json.body.customerName }} : {{ new Date($json.body.followUpDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}",
+        "additionalFields": {
+          "dueDate": "={{ $json.body.followUpDate }}:00.000Z",
+          "notes": "=📋 SOLAR LEAD FOLLOW-UP\n━━━━━━━━━━━━━━━━━━━━━\n\n👤 Customer: {{ $json.body.customerName }}\n📞 Phone: {{ $json.body.phone }}\n📧 Email: {{ $json.body.email }}\n🏠 Project Type: {{ $json.body.projectType }}\n📍 Address: {{ $json.body.siteInfo }}\n⚡ Electrical: {{ $json.body.electricalService }}\n📊 Status: {{ $json.body.consultationStatus }}\n\n📝 Notes:\n{{ $json.body.notes }}\n\n━━━━━━━━━━━━━━━━━━━━━\nLead ID: {{ $json.body.leadId }}"
+        }
+      },
+      "id": "create-task-node",
+      "name": "Google Tasks - Create",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [480, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"action\": \"updated\", \"taskId\": \"{{ $json.body.taskId }}\" }",
+        "options": {}
+      },
+      "id": "respond-update-node",
+      "name": "Respond - Updated",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"action\": \"created\", \"taskId\": \"{{ $json.id }}\" }",
+        "options": {}
+      },
+      "id": "respond-create-node",
+      "name": "Respond - Created",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 420]
+    },
+    {
+      "parameters": {
+        "content": "## 🌞 Solar Lead Follow-up Workflow v2\n\n### How it works:\n1. **Webhook** receives lead data from SunTrack app\n2. **IF** checks if taskId exists (update vs create)\n3. **Update branch**: Updates existing Google Task\n4. **Create branch**: Creates new task & returns ID\n\n### Important:\n- Select your Task List in BOTH Google Tasks nodes\n- Connect your Google account in both nodes\n- The Create node needs a default task list selected",
+        "height": 280,
+        "width": 340,
+        "color": 5
+      },
+      "id": "sticky-note-1",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-40, -60]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Setup Required\n\n1. Click each Google Tasks node\n2. Select your Google credentials\n3. Choose your Task List\n4. Save and activate!",
+        "height": 160,
+        "width": 240,
+        "color": 3
+      },
+      "id": "sticky-note-2",
+      "name": "Sticky Note - Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [340, -60]
+    }
+  ],
+  "connections": {
+    "Webhook - Receive Lead": {
+      "main": [
+        [
+          {
+            "node": "Has Existing Task?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Existing Task?": {
+      "main": [
+        [
+          {
+            "node": "Google Tasks - Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Tasks - Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Tasks - Update": {
+      "main": [
+        [
+          {
+            "node": "Respond - Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Tasks - Create": {
+      "main": [
+        [
+          {
+            "node": "Respond - Created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
