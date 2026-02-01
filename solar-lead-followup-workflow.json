@@ -1,5 +1,5 @@
 {
-  "name": "Solar Lead Follow-up → Google Tasks (with Updates)",
+  "name": "Solar Lead Follow-up → Google Tasks + Sheets",
   "nodes": [
     {
       "parameters": {
@@ -58,7 +58,7 @@
       "name": "Google Tasks - Update",
       "type": "n8n-nodes-base.googleTasks",
       "typeVersion": 1,
-      "position": [480, 180]
+      "position": [480, 100]
     },
     {
       "parameters": {
@@ -73,36 +73,119 @@
       "name": "Google Tasks - Create",
       "type": "n8n-nodes-base.googleTasks",
       "typeVersion": 1,
-      "position": [480, 420]
+      "position": [480, 500]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('Webhook - Receive Lead').first().json.body.leadId }}",
+            "Customer Name": "={{ $('Webhook - Receive Lead').first().json.body.customerName }}",
+            "Phone": "={{ $('Webhook - Receive Lead').first().json.body.phone }}",
+            "Email": "={{ $('Webhook - Receive Lead').first().json.body.email }}",
+            "Project Type": "={{ $('Webhook - Receive Lead').first().json.body.projectType }}",
+            "Follow-up Date": "={{ $('Webhook - Receive Lead').first().json.body.followUpDate.split('T')[0] }}",
+            "Follow-up Time": "={{ new Date($('Webhook - Receive Lead').first().json.body.followUpDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}",
+            "Consultation Status": "={{ $('Webhook - Receive Lead').first().json.body.consultationStatus }}",
+            "Site Address": "={{ $('Webhook - Receive Lead').first().json.body.siteInfo }}",
+            "Electrical Service": "={{ $('Webhook - Receive Lead').first().json.body.electricalService }}",
+            "Notes": "={{ $('Webhook - Receive Lead').first().json.body.notes }}",
+            "Last Updated": "={{ new Date().toISOString() }}",
+            "Google Task ID": "={{ $('Webhook - Receive Lead').first().json.body.taskId }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "sheets-update-node",
+      "name": "Google Sheets - Update Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 100]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('Webhook - Receive Lead').first().json.body.leadId }}",
+            "Customer Name": "={{ $('Webhook - Receive Lead').first().json.body.customerName }}",
+            "Phone": "={{ $('Webhook - Receive Lead').first().json.body.phone }}",
+            "Email": "={{ $('Webhook - Receive Lead').first().json.body.email }}",
+            "Project Type": "={{ $('Webhook - Receive Lead').first().json.body.projectType }}",
+            "Follow-up Date": "={{ $('Webhook - Receive Lead').first().json.body.followUpDate.split('T')[0] }}",
+            "Follow-up Time": "={{ new Date($('Webhook - Receive Lead').first().json.body.followUpDate).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) }}",
+            "Consultation Status": "={{ $('Webhook - Receive Lead').first().json.body.consultationStatus }}",
+            "Site Address": "={{ $('Webhook - Receive Lead').first().json.body.siteInfo }}",
+            "Electrical Service": "={{ $('Webhook - Receive Lead').first().json.body.electricalService }}",
+            "Notes": "={{ $('Webhook - Receive Lead').first().json.body.notes }}",
+            "Created Date": "={{ new Date().toISOString() }}",
+            "Last Updated": "={{ new Date().toISOString() }}",
+            "Google Task ID": "={{ $json.id }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "sheets-append-node",
+      "name": "Google Sheets - Add Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 500]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"success\": true, \"action\": \"updated\", \"taskId\": \"{{ $json.body.taskId }}\" }",
+        "responseBody": "={ \"success\": true, \"action\": \"updated\", \"taskId\": \"{{ $('Webhook - Receive Lead').first().json.body.taskId }}\" }",
         "options": {}
       },
       "id": "respond-update-node",
       "name": "Respond - Updated",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [720, 180]
+      "position": [960, 100]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"success\": true, \"action\": \"created\", \"taskId\": \"{{ $json.id }}\" }",
+        "responseBody": "={ \"success\": true, \"action\": \"created\", \"taskId\": \"{{ $('Google Tasks - Create').first().json.id }}\" }",
         "options": {}
       },
       "id": "respond-create-node",
       "name": "Respond - Created",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [720, 420]
+      "position": [960, 500]
     },
     {
       "parameters": {
-        "content": "## 🌞 Solar Lead Follow-up Workflow v2\n\n### How it works:\n1. **Webhook** receives lead data from SunTrack app\n2. **IF** checks if taskId exists (update vs create)\n3. **Update branch**: Updates existing Google Task\n4. **Create branch**: Creates new task & returns ID\n\n### Important:\n- Select your Task List in BOTH Google Tasks nodes\n- Connect your Google account in both nodes\n- The Create node needs a default task list selected",
-        "height": 280,
+        "content": "## 🌞 Solar Lead Follow-up Workflow v3\n\n### Features:\n1. Creates/Updates Google Tasks with lead info\n2. Logs all leads to Google Sheets\n3. Returns task ID to SunTrack app\n\n### Flow:\n- **New leads** → Create Task → Add Sheet Row → Respond\n- **Updates** → Update Task → Update Sheet Row → Respond",
+        "height": 240,
         "width": 340,
         "color": 5
       },
@@ -114,9 +197,9 @@
     },
     {
       "parameters": {
-        "content": "## ⚠️ Setup Required\n\n1. Click each Google Tasks node\n2. Select your Google credentials\n3. Choose your Task List\n4. Save and activate!",
-        "height": 160,
-        "width": 240,
+        "content": "## ⚠️ Setup Required\n\n1. **Google Tasks nodes**: Select credentials + Task List\n2. **Google Sheets nodes**: Select credentials + Spreadsheet + Sheet\n3. Upload `suntrack-leads-template.csv` to Google Drive as a Sheet first!\n4. For Update Row: Set 'Lead ID' as the match column",
+        "height": 200,
+        "width": 300,
         "color": 3
       },
       "id": "sticky-note-2",
@@ -160,7 +243,7 @@
       "main": [
         [
           {
-            "node": "Respond - Updated",
+            "node": "Google Sheets - Update Row",
             "type": "main",
             "index": 0
           }
@@ -168,6 +251,28 @@
       ]
     },
     "Google Tasks - Create": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Add Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Update Row": {
+      "main": [
+        [
+          {
+            "node": "Respond - Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Add Row": {
       "main": [
         [
           {
