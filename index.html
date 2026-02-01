@@ -1377,7 +1377,7 @@
         notes: notes,
         followUp: false,
         followUpDate: null,
-        syncedToTasks: false,
+        googleTaskId: null,
         photos: [],
         checklist: {
           projectType: { value: '', checked: false },
@@ -1525,8 +1525,8 @@
       updateCounts();
       showToast('Lead saved successfully!');
 
-      // Sync to Google Tasks if follow-up is scheduled and not yet synced
-      if (lead.followUp && lead.followUpDate && !lead.syncedToTasks) {
+      // Sync to Google Tasks if follow-up is scheduled (creates or updates)
+      if (lead.followUp && lead.followUpDate) {
         syncToGoogleTasks(lead);
       }
     }
@@ -1820,8 +1820,11 @@
         });
       }
 
+      const isUpdate = !!lead.googleTaskId;
+
       const payload = {
         leadId: lead.id,
+        taskId: lead.googleTaskId || null,  // Include for updates
         customerName: lead.checklist.customerName.value || lead.name,
         phone: lead.checklist.phone.value || '',
         email: lead.checklist.email.value || '',
@@ -1841,9 +1844,18 @@
         });
 
         if (response.ok) {
-          lead.syncedToTasks = true;
+          // Try to get the task ID from response (for new tasks)
+          try {
+            const result = await response.json();
+            if (result.taskId && !lead.googleTaskId) {
+              lead.googleTaskId = result.taskId;
+            }
+          } catch (e) {
+            // Response might not be JSON, that's ok for updates
+          }
+
           saveToLocalStorage();
-          showToast('📅 Synced to Google Tasks!', 'success');
+          showToast(isUpdate ? '📅 Google Task updated!' : '📅 Synced to Google Tasks!', 'success');
           return true;
         } else {
           showToast('Failed to sync to Google Tasks', '');
